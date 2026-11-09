@@ -1,0 +1,16 @@
+[Unit]
+Description=Agenda MCP server
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/agenda.trixy.space
+ExecStart=/var/www/agenda.trixy.space/agenda serve
+Restart=always
+RestartSec=2
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target
