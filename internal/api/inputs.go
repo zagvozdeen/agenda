@@ -31,9 +31,9 @@ type CreateBoardInput struct {
 }
 
 type UpdateBoardInput struct {
-	BoardKey    string  `json:"board_key" jsonschema:"Board key."`
-	Name        *string `json:"name,omitempty" jsonschema:"New board name."`
-	Description *string `json:"description,omitempty" jsonschema:"New board description."`
+	BoardKey    string           `json:"board_key" jsonschema:"Board key."`
+	Name        *string          `json:"name,omitempty" jsonschema:"New board name."`
+	Description Optional[string] `json:"description,omitzero" jsonschema:"New board description."`
 }
 
 type AddMemberInput struct {
@@ -63,12 +63,12 @@ type CreateSprintInput struct {
 }
 
 type UpdateSprintInput struct {
-	BoardKey  string  `json:"board_key" jsonschema:"Board key."`
-	Number    int     `json:"number" jsonschema:"Sprint number within the board."`
-	Name      *string `json:"name,omitempty" jsonschema:"New sprint name."`
-	Goal      *string `json:"goal,omitempty" jsonschema:"New sprint goal."`
-	StartDate *string `json:"start_date,omitempty" jsonschema:"Start date in YYYY-MM-DD format."`
-	EndDate   *string `json:"end_date,omitempty" jsonschema:"End date in YYYY-MM-DD format."`
+	BoardKey  string           `json:"board_key" jsonschema:"Board key."`
+	Number    int              `json:"number" jsonschema:"Sprint number within the board."`
+	Name      Optional[string] `json:"name,omitzero" jsonschema:"New sprint name."`
+	Goal      Optional[string] `json:"goal,omitzero" jsonschema:"New sprint goal."`
+	StartDate Optional[string] `json:"start_date,omitzero" jsonschema:"Start date in YYYY-MM-DD format."`
+	EndDate   Optional[string] `json:"end_date,omitzero" jsonschema:"End date in YYYY-MM-DD format."`
 }
 
 type SprintInput struct {
@@ -106,10 +106,10 @@ type UpdateTaskInput struct {
 	Type          *enums.TaskType     `json:"type,omitempty" jsonschema:"New task type."`
 	Status        *enums.TaskStatus   `json:"status,omitempty" jsonschema:"New task status."`
 	Priority      *enums.TaskPriority `json:"priority,omitempty" jsonschema:"New task priority."`
-	AssigneeID    *uuid.UUID          `json:"assignee_id,omitempty" jsonschema:"New assignee."`
-	SprintNumber  *int                `json:"sprint_number,omitempty" jsonschema:"New sprint number on the same board."`
-	ParentID      *string             `json:"parent_id,omitempty" jsonschema:"New parent task on the same board."`
-	EstimateHours *int                `json:"estimate_hours,omitempty" jsonschema:"New estimated effort in whole hours."`
+	AssigneeID    Optional[uuid.UUID] `json:"assignee_id,omitzero" jsonschema:"New assignee; null clears the assignee."`
+	SprintNumber  Optional[int]       `json:"sprint_number,omitzero" jsonschema:"New sprint number on the same board; null moves the task to backlog."`
+	ParentID      Optional[string]    `json:"parent_id,omitzero" jsonschema:"New parent task on the same board; null clears the parent."`
+	EstimateHours Optional[int]       `json:"estimate_hours,omitzero" jsonschema:"New estimated effort in whole hours; null clears the estimate."`
 }
 
 type SearchTasksInput struct {

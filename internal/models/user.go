@@ -14,6 +14,7 @@ type User struct {
 }
 
 type APIToken struct {
+	UpdatedAt  time.Time  `json:"updated_at"`
 	ID         uuid.UUID  `json:"id"`
 	UserID     uuid.UUID  `json:"user_id"`
 	TokenHash  string     `json:"-"`

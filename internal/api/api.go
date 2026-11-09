@@ -32,7 +32,7 @@ func NewApplication(cfg *config.Config, log *slog.Logger, storage store.Storage)
 			Version: "0.1.0",
 		}, &mcp.ServerOptions{
 			Logger:       log,
-			Instructions: "Agenda scaffold. All 25 tools are registered but their domain logic is not implemented. Reading is public; whoami and writes require a personal Bearer token. No tool currently modifies board data.",
+			Instructions: "Agenda task tracker. Reading is public; whoami and writes require a personal Bearer token. Board owners manage boards and members; board members manage tasks, comments and sprints. Search filters use current task fields. Nullable update fields accept null to clear their values.",
 		}),
 	}
 	a.registerUsers()

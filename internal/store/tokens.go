@@ -15,9 +15,9 @@ var ErrInvalidToken = errors.New("invalid token")
 func (s *Store) CreateToken(ctx context.Context, token *models.APIToken) error {
 	err := s.querier(ctx).QueryRow(
 		ctx,
-		"INSERT INTO api_tokens (user_id, token_hash, name, expires_at) SELECT id, $2, $3, $4 FROM users WHERE id = $1 AND deleted_at IS NULL RETURNING id, created_at",
+		"INSERT INTO api_tokens (user_id, token_hash, name, expires_at, created_at, updated_at) SELECT id, $2, $3, $4, now(), now() FROM users WHERE id = $1 AND deleted_at IS NULL RETURNING id, created_at, updated_at",
 		token.UserID, token.TokenHash, token.Name, token.ExpiresAt,
-	).Scan(&token.ID, &token.CreatedAt)
+	).Scan(&token.ID, &token.CreatedAt, &token.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrUserNotFound
@@ -30,19 +30,33 @@ func (s *Store) CreateToken(ctx context.Context, token *models.APIToken) error {
 func (s *Store) ListTokens(ctx context.Context, userID uuid.UUID) ([]models.APIToken, error) {
 	rows, err := s.querier(ctx).Query(
 		ctx,
-		"SELECT id, user_id, name, created_at, last_used_at, expires_at, revoked_at FROM api_tokens WHERE user_id = $1 ORDER BY created_at, id",
+		"SELECT id, user_id, name, created_at, updated_at, last_used_at, expires_at, revoked_at FROM api_tokens WHERE user_id = $1 ORDER BY created_at, id",
 		userID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list tokens: %w", err)
 	}
-	return pgx.CollectRows(rows, pgx.RowToStructByNameLax[models.APIToken])
+	defer rows.Close()
+	var tokens []models.APIToken
+	for rows.Next() {
+		var token models.APIToken
+		err = rows.Scan(&token.ID, &token.UserID, &token.Name, &token.CreatedAt, &token.UpdatedAt, &token.LastUsedAt, &token.ExpiresAt, &token.RevokedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list tokens: %w", err)
+		}
+		tokens = append(tokens, token)
+	}
+	err = rows.Err()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list tokens: %w", err)
+	}
+	return tokens, nil
 }
 
 func (s *Store) RevokeToken(ctx context.Context, id uuid.UUID) error {
 	result, err := s.querier(ctx).Exec(
 		ctx,
-		"UPDATE api_tokens SET revoked_at = now() WHERE id = $1 AND revoked_at IS NULL",
+		"UPDATE api_tokens SET revoked_at = now(), updated_at = now() WHERE id = $1 AND revoked_at IS NULL",
 		id,
 	)
 	if err != nil {
@@ -58,7 +72,7 @@ func (s *Store) AuthenticateToken(ctx context.Context, hash string) (*models.Use
 	u := &models.User{}
 	err := s.querier(ctx).QueryRow(
 		ctx,
-		"UPDATE api_tokens AS t SET last_used_at = now() FROM users AS u WHERE t.token_hash = $1 AND t.user_id = u.id AND t.revoked_at IS NULL AND (t.expires_at IS NULL OR t.expires_at > now()) AND u.deleted_at IS NULL RETURNING u.id, u.username, u.name, u.created_at, u.deleted_at",
+		"UPDATE api_tokens AS t SET last_used_at = now(), updated_at = now() FROM users AS u WHERE t.token_hash = $1 AND t.user_id = u.id AND t.revoked_at IS NULL AND (t.expires_at IS NULL OR t.expires_at > now()) AND u.deleted_at IS NULL RETURNING u.id, u.username, u.name, u.created_at, u.deleted_at",
 		hash,
 	).Scan(&u.ID, &u.Username, &u.Name, &u.CreatedAt, &u.DeletedAt)
 	if err != nil {

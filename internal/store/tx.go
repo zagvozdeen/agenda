@@ -21,7 +21,7 @@ type querier interface {
 func (s *Store) Begin(ctx context.Context) (context.Context, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	return context.WithValue(ctx, transactionKey{}, tx), nil
 }
@@ -40,7 +40,8 @@ func (s *Store) Commit(ctx context.Context) error {
 
 func (s *Store) Rollback(ctx context.Context) {
 	if tx, ok := ctx.Value(transactionKey{}).(pgx.Tx); ok {
-		if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+		err := tx.Rollback(ctx)
+		if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
 			s.log.ErrorContext(ctx, "Failed to rollback transaction", slog.Any("error", err))
 		}
 		return
