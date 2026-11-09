@@ -1,0 +1,11 @@
+services:
+  db:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: agenda
+      POSTGRES_USER: agenda
+      POSTGRES_PASSWORD: agenda
+    volumes:
+      - ./.data/postgres:/var/lib/postgresql
+    ports:
+      - '5433:5432'

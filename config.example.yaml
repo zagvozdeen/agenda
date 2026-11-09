@@ -1,0 +1,12 @@
+app:
+  host: 127.0.0.1
+  port: 8081
+  is_production: false
+  down_migrations: false
+
+database:
+  host: 127.0.0.1
+  port: 5433
+  database: agenda
+  username: agenda
+  password: agenda
