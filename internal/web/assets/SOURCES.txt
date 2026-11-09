@@ -1,0 +1,6 @@
+Montserrat SemiBold
+https://fonts.google.com/specimen/Montserrat
+https://github.com/JulietaUla/Montserrat
+https://raw.githubusercontent.com/JulietaUla/Montserrat/master/fonts/ttf/Montserrat-SemiBold.ttf
+
+License: SIL Open Font License 1.1, included in OFL.txt.

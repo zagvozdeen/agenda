@@ -20,13 +20,15 @@ type API struct {
 	log   *slog.Logger
 	store store.Storage
 	mcp   *mcp.Server
+	pages http.Handler
 }
 
-func NewApplication(cfg *config.Config, log *slog.Logger, storage store.Storage) *API {
+func NewApplication(cfg *config.Config, log *slog.Logger, storage store.Storage, pages http.Handler) *API {
 	a := &API{
 		cfg:   cfg,
 		log:   log,
 		store: storage,
+		pages: pages,
 		mcp: mcp.NewServer(&mcp.Implementation{
 			Name:    "agenda",
 			Version: "0.1.0",
@@ -55,6 +57,7 @@ func (a *API) Handler() http.Handler {
 
 	mux := http.NewServeMux()
 	mux.Handle("/mcp", a.rateLimit(limiter, http.NewCrossOriginProtection().Handler(a.authenticate(handler))))
+	mux.Handle("/", a.pages)
 	return mux
 }
 

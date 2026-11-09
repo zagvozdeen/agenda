@@ -1,0 +1,29 @@
+{{define "task"}}{{with .Task}}
+<main class="task" id="main">
+  <header class="task__heading">
+    <nav class="breadcrumbs" aria-label="Навигация"><a class="breadcrumbs__link" href="/{{.BoardKey}}"><svg class="icon breadcrumbs__icon" aria-hidden="true"><use href="/static/icons.svg#arrow-left"></use></svg>Доска</a><span>/</span><span class="mono">{{.ID}}</span></nav>
+    <h1 class="page-title task__title">{{.Title}}</h1>
+    <div class="task__timestamps"><span>Создана <time datetime="{{isoDate .CreatedAt}}" data-date>{{date .CreatedAt}}</time></span><span class="task__time-separator" aria-hidden="true">·</span><span>Обновлена <time datetime="{{isoDate .UpdatedAt}}" data-date>{{date .UpdatedAt}}</time></span></div>
+  </header>
+  <section class="task__ribbon" aria-label="Свойства задачи">
+    <dl class="properties">
+      <div class="property"><dt class="property__label">Статус</dt><dd class="property__value"><span class="status-badge status-badge--{{statusClass .Status}}" data-status="{{.Status}}"><span class="status-dot status-dot--{{statusClass .Status}}" aria-hidden="true"></span>{{status .Status}}</span></dd></div>
+      <div class="property"><dt class="property__label">Исполнитель</dt><dd class="property__value person"><span class="avatar" aria-hidden="true">{{.Assignee.Initials}}</span><span class="person__name">{{.Assignee.Name}}</span></dd></div>
+      <div class="property"><dt class="property__label">Приоритет</dt><dd class="property__value priority priority--{{.Priority}}" data-priority="{{.Priority}}"><svg class="icon priority__icon" aria-hidden="true"><use href="/static/icons.svg#{{if or (eq .Priority "high") (eq .Priority "critical")}}arrow-up{{else if eq .Priority "low"}}arrow-down{{else}}minus{{end}}"></use></svg>{{priority .Priority}}</dd></div>
+      <div class="property"><dt class="property__label">Тип задачи</dt><dd class="property__value task-type task-type--{{.Type}}" data-type="{{.Type}}"><svg class="icon task-type__icon" aria-hidden="true"><use href="/static/icons.svg#{{if eq .Type "bug"}}bug{{else if eq .Type "chore"}}wrench{{else}}diamond{{end}}"></use></svg>{{taskType .Type}}</dd></div>
+      <div class="property"><dt class="property__label">Доска</dt><dd class="property__value"><a class="property__link" href="/{{.BoardKey}}"><span class="mono property__key">{{.BoardKey}}</span> · {{.BoardName}}</a></dd></div>
+      <div class="property"><dt class="property__label">Спринт</dt><dd class="property__value">{{.Sprint}}</dd></div>
+      <div class="property"><dt class="property__label">Оценка</dt><dd class="property__value">{{if .EstimateHours}}{{.EstimateHours}} ч{{else}}Не задана{{end}}</dd></div>
+      <div class="property"><dt class="property__label">Автор</dt><dd class="property__value">{{.Creator.Name}}</dd></div>
+    </dl>
+  </section>
+  <div class="task__content">
+    <div class="task__document">
+      <section class="description"><h2 class="section-title">Описание</h2>{{if .Description}}<div class="prose">{{.Description}}</div>{{else}}<p class="empty-text">Описание пока не добавлено.</p>{{end}}</section>
+      <section class="comments"><header class="comments__heading"><h2 class="section-title comments__title">Комментарии</h2><span class="comments__count">{{len .Comments}}</span></header>{{range .Comments}}<article class="comment"><header class="comment__header"><span class="avatar" aria-hidden="true">{{.Author.Initials}}</span><span class="comment__author">{{.Author.Name}}</span><time class="comment__date" datetime="{{isoDate .CreatedAt}}" data-date>{{date .CreatedAt}}</time></header><div class="prose">{{.Body}}</div>{{if .UpdatedAt}}<span class="comment__edited">Изменён <time datetime="{{isoDate .UpdatedAt}}" data-date>{{date .UpdatedAt}}</time></span>{{end}}</article>{{else}}<p class="empty-text">Комментариев пока нет.</p>{{end}}</section>
+    </div>
+    <aside class="related-tasks" aria-label="Связанные задачи"><h2 class="section-title">Связанные задачи</h2>{{range .Related}}<a class="related-task" href="/{{.ID}}"><div class="related-task__header"><span class="mono">{{.ID}}</span><span class="related-task__relation">{{.Label}}</span></div><span class="related-task__title">{{.Title}}</span><span class="related-task__status" data-status="{{.Status}}"><span class="status-dot status-dot--{{statusClass .Status}}" aria-hidden="true"></span>{{status .Status}}</span></a>{{else}}<p class="empty-text">Связей пока нет.</p>{{end}}</aside>
+  </div>
+  <footer class="page-footer"><span>{{.BoardKey}} / {{.BoardName}}</span><span class="mono">/{{.ID}}</span></footer>
+</main>
+{{end}}{{end}}

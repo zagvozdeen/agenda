@@ -1,0 +1,77 @@
+{{define "page"}}<!doctype html>
+<html class="page" lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>{{.Meta.Title}}</title>
+  <meta name="description" content="{{.Meta.Description}}">
+  <link rel="canonical" href="{{.Meta.URL}}">
+  <meta property="og:site_name" content="Agenda">
+  <meta property="og:locale" content="ru_RU">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{{.Meta.Title}}">
+  <meta property="og:description" content="{{.Meta.Description}}">
+  <meta property="og:url" content="{{.Meta.URL}}">
+  <meta property="og:image" content="{{.Meta.Image}}">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="{{.Meta.ImageAlt}}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{.Meta.Title}}">
+  <meta name="twitter:description" content="{{.Meta.Description}}">
+  <meta name="twitter:image" content="{{.Meta.Image}}">
+  <meta name="twitter:image:alt" content="{{.Meta.ImageAlt}}">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg?v={{.Version}}">
+  <link rel="stylesheet" href="/static/app.css?v={{.Version}}">
+  <script type="module" src="/static/app.js?v={{.Version}}"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">К содержимому</a>
+  {{template "workspace" .}}
+  <div class="request-notice" id="request-notice" role="status" aria-live="polite" hidden></div>
+  <div class="sr-only" id="board-announcer" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>{{end}}
+
+{{define "workspace"}}
+<div class="workspace" id="workspace" data-page="{{.Kind}}" data-title="{{.Meta.Title}}" data-description="{{.Meta.Description}}" data-canonical="{{.Meta.URL}}" data-image="{{.Meta.Image}}" data-image-alt="{{.Meta.ImageAlt}}">
+  <aside class="sidebar" aria-label="Agenda">
+    <a class="sidebar__logo" href="/" aria-label="Agenda — главная"><svg class="icon sidebar__logo-icon" aria-hidden="true"><use href="/static/icons.svg#asterisk"></use></svg></a>
+    <a class="sidebar__link{{if eq .Kind "board"}} sidebar__link--current{{end}}" href="/" aria-label="Канбан" {{if eq .Kind "board"}}aria-current="page"{{end}}><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#columns"></use></svg></a>
+    <span class="sidebar__wordmark">AGENDA</span>
+  </aside>
+  <div class="workspace__window">
+    <header class="topbar">
+      <a class="topbar__wordmark" href="/">agenda</a>
+      <span class="topbar__separator" aria-hidden="true">/</span>
+      {{if .Board}}<span class="topbar__context">{{if and .Board.Key (ne .Board.Key "all")}}<span class="mono topbar__key">{{.Board.Key}}</span><span class="topbar__dot">·</span>{{end}}{{.Board.Name}}</span>{{else if .Task}}<a class="topbar__context topbar__context--link" href="/{{.Task.BoardKey}}"><span class="mono topbar__key">{{.Task.BoardKey}}</span><span class="topbar__dot">·</span>{{.Task.BoardName}}</a>{{else}}<span class="topbar__context">Рабочее пространство</span>{{end}}
+      <span class="topbar__suffix mono">{{if .Task}}/{{.Task.ID}}{{else}}workspace{{end}}</span>
+      <span class="topbar__badge" aria-label="Agenda">A</span>
+    </header>
+    {{if eq .Kind "board"}}{{template "board" .}}{{else if eq .Kind "task"}}{{template "task" .}}{{else}}
+    <main class="error-page" id="main"><span class="error-page__code mono">{{.ErrorCode}}</span><h1 class="page-title">{{.Error}}</h1><a class="button" href="/">Вернуться к доске<svg class="icon" aria-hidden="true"><use href="/static/icons.svg#arrow-right"></use></svg></a></main>
+    {{end}}
+  </div>
+</div>
+{{end}}
+
+{{define "select"}}
+<div class="filters__field">
+  <span class="filters__label" id="label-{{.Name}}">{{.Label}}</span>
+  <details class="select" data-select="{{.Name}}" {{if .Multiple}}data-multiple{{end}}>
+    <summary class="select__trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="options-{{.Name}}" aria-labelledby="label-{{.Name}} value-{{.Name}}">
+      <span class="select__value" id="value-{{.Name}}">{{.Value}}</span>
+      <svg class="icon select__chevron" aria-hidden="true"><use href="/static/icons.svg#chevron"></use></svg>
+    </summary>
+    <div class="select__menu" role="listbox" id="options-{{.Name}}" aria-labelledby="label-{{.Name}}" {{if .Multiple}}aria-multiselectable="true"{{end}}>
+      {{range $index, $option := .Options}}<label class="select__option{{if .Selected}} select__option--selected{{end}}" id="option-{{$.Name}}-{{$index}}" role="option" aria-selected="{{.Selected}}" data-option data-value="{{.Value}}">
+        <input class="select__input" type="{{if $.Multiple}}checkbox{{else}}radio{{end}}" name="{{$.Name}}" value="{{.Value}}" {{if .Selected}}checked{{end}} tabindex="-1" aria-hidden="true">
+        <span class="select__option-label">{{.Label}}</span>
+        <svg class="icon select__check" aria-hidden="true"><use href="/static/icons.svg#check"></use></svg>
+      </label>{{end}}
+    </div>
+  </details>
+</div>
+{{end}}

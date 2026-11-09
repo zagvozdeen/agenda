@@ -15,6 +15,7 @@ type Config struct {
 type AppConfig struct {
 	Host           string `yaml:"host"`
 	Port           string `yaml:"port"`
+	PublicURL      string `yaml:"public_url"`
 	IsProduction   bool   `yaml:"is_production"`
 	DownMigrations bool   `yaml:"down_migrations"`
 }

@@ -11,6 +11,7 @@ import (
 	"gitverse.ru/zagvozdeen/agenda/internal/cli"
 	"gitverse.ru/zagvozdeen/agenda/internal/config"
 	"gitverse.ru/zagvozdeen/agenda/internal/store"
+	"gitverse.ru/zagvozdeen/agenda/internal/web"
 )
 
 func main() {
@@ -25,6 +26,10 @@ func run() error {
 	defer cancel()
 
 	return cli.Run(ctx, func(ctx context.Context, cfg *config.Config, log *slog.Logger, storage store.Storage) error {
-		return api.NewApplication(cfg, log, storage).Run(ctx)
+		pages, err := web.New(cfg, log, storage)
+		if err != nil {
+			return err
+		}
+		return api.NewApplication(cfg, log, storage, pages).Run(ctx)
 	})
 }

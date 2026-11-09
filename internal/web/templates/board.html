@@ -1,0 +1,41 @@
+{{define "board"}}
+<div class="board">
+  <aside class="filters" aria-label="Фильтры задач">
+    <div class="filters__heading"><svg class="icon filters__icon" aria-hidden="true"><use href="/static/icons.svg#filters"></use></svg><h2 class="filters__title">Фильтры</h2></div>
+    <form class="filters__form" action="/" method="get" id="filters-form">
+      <input type="hidden" name="columns_set" value="1">
+      {{range .Board.Selects}}{{template "select" .}}{{end}}
+      <button class="button filters__submit" type="submit">Применить фильтры</button>
+    </form>
+    <a class="filters__reset" href="/" data-reset-filters><svg class="icon filters__reset-icon" aria-hidden="true"><use href="/static/icons.svg#refresh"></use></svg>Сбросить фильтры</a>
+    <div class="filters__caption">Задачи, исполнители<br>и спринты в одном месте.</div>
+  </aside>
+  <main class="board__main" id="main">
+    <header class="board__heading">
+      <div><div class="breadcrumbs"><span class="mono">{{if and .Board.Key (ne .Board.Key "all")}}{{.Board.Key}}{{else}}AGENDA{{end}}</span><span>/</span><span>Канбан</span></div><h1 class="page-title">{{.Board.Name}}</h1><p class="board__subtitle">{{.Board.Subtitle}}</p></div>
+      <span class="board__total" aria-live="polite">{{taskCount .Board.Count}}</span>
+    </header>
+    {{if not .Board.HasBoard}}
+    <section class="empty-state"><span class="empty-state__mark"><svg class="icon empty-state__icon" aria-hidden="true"><use href="/static/icons.svg#columns"></use></svg></span><h2 class="empty-state__title">Здесь начнётся работа</h2><p class="empty-state__description">Пока нет ни одной доски. Когда появятся задачи, они будут собраны здесь.</p></section>
+    {{else if not .Board.Columns}}
+    <section class="empty-state"><span class="empty-state__mark"><svg class="icon empty-state__icon" aria-hidden="true"><use href="/static/icons.svg#columns"></use></svg></span><h2 class="empty-state__title">Выберите колонки</h2><p class="empty-state__description">Откройте фильтр «Колонки» и выберите статусы, которые хотите видеть на доске.</p></section>
+    {{else}}
+    <div class="kanban kanban--columns-{{len .Board.Columns}}">
+      {{range .Board.Columns}}<section class="lane" data-status="{{.Status}}" aria-label="{{status .Status}}">
+        <header class="lane__heading"><h2 class="lane__title"><span class="status-dot status-dot--{{statusClass .Status}}" aria-hidden="true"></span>{{status .Status}}</h2><span class="lane__count">{{len .Tasks}}</span></header>
+        <div class="lane__tasks">{{range .Tasks}}{{template "card" .}}{{else}}<div class="lane__empty">Нет задач</div>{{end}}</div>
+      </section>{{end}}
+    </div>
+    {{end}}
+    <footer class="page-footer"><span>{{if and .Board.Key (ne .Board.Key "all")}}{{.Board.Key}} / {{end}}{{.Board.Name}}</span><span class="mono">/</span></footer>
+  </main>
+</div>
+{{end}}
+
+{{define "card"}}
+<a class="task-card" href="/{{.ID}}" aria-label="{{.ID}}: {{.Title}}">
+  <div class="task-card__header"><span class="task-card__id mono">{{.ID}}</span><span class="priority priority--{{.Priority}} tooltip" data-priority="{{.Priority}}" data-tooltip="{{priority .Priority}}" aria-label="Приоритет: {{priority .Priority}}"><svg class="icon priority__icon" aria-hidden="true"><use href="/static/icons.svg#{{if or (eq .Priority "high") (eq .Priority "critical")}}arrow-up{{else if eq .Priority "low"}}arrow-down{{else}}minus{{end}}"></use></svg></span></div>
+  <h3 class="task-card__title">{{.Title}}</h3>
+  <div class="task-card__meta"><span class="task-type task-type--{{.Type}}" data-type="{{.Type}}"><svg class="icon task-type__icon" aria-hidden="true"><use href="/static/icons.svg#{{if eq .Type "bug"}}bug{{else if eq .Type "chore"}}wrench{{else}}diamond{{end}}"></use></svg>{{taskType .Type}}</span><span class="avatar tooltip" data-tooltip="{{.Assignee.Name}}" aria-label="{{.Assignee.Name}}">{{.Assignee.Initials}}</span></div>
+</a>
+{{end}}
