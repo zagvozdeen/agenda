@@ -115,7 +115,7 @@ func (a *Application) boardPage(r *http.Request) (*Page, error) {
 	ctx := r.Context()
 	var boards []models.Board
 	for offset := 0; ; offset += 200 {
-		batch, err := a.store.ListBoards(ctx, nil, 200, offset)
+		batch, err := a.store.ListBoards(ctx, nil, nil, 200, offset)
 		if err != nil {
 			return nil, err
 		}
@@ -195,7 +195,7 @@ func (a *Application) boardPage(r *http.Request) (*Page, error) {
 				found = true
 				number := item.Number
 				filter.SprintNumber = &number
-				view.Subtitle = "Спринт " + sprintName(item)
+				view.Subtitle = sprintName(item)
 			}
 		}
 		if !found {
@@ -357,6 +357,9 @@ func (a *Application) taskPage(r *http.Request, id string) (*Page, error) {
 	if err != nil {
 		return nil, err
 	}
+	if board.IsPrivate {
+		return nil, store.ErrTaskNotFound
+	}
 	users, err := a.store.ListUsers(ctx)
 	if err != nil {
 		return nil, err
@@ -402,7 +405,7 @@ func (a *Application) taskPage(r *http.Request, id string) (*Page, error) {
 	for _, subtask := range subtasks {
 		view.Related = append(view.Related, RelatedTask{ID: subtask.ID, Title: subtask.Title, Label: "Подзадача", Status: subtask.Status})
 	}
-	links, err := a.store.ListTaskLinks(ctx, id)
+	links, err := a.store.ListTaskLinks(ctx, id, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -503,11 +506,10 @@ func lookupPerson(people map[string]Person, id *uuid.UUID) Person {
 }
 
 func sprintName(sprint models.Sprint) string {
-	name := fmt.Sprintf("%02d", sprint.Number)
 	if sprint.Name != nil && *sprint.Name != "" {
-		name += " · " + *sprint.Name
+		return *sprint.Name
 	}
-	return name
+	return fmt.Sprintf("Спринт %d", sprint.Number)
 }
 
 func excerpt(value string, limit int) string {

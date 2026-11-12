@@ -11,6 +11,7 @@ type Board struct {
 	Key         string     `json:"key"`
 	Name        string     `json:"name"`
 	Description *string    `json:"description,omitempty"`
+	IsPrivate   bool       `json:"is_private"`
 	TaskSeq     int        `json:"task_seq"`
 	SprintSeq   int        `json:"sprint_seq"`
 	CreatedBy   uuid.UUID  `json:"created_by"`

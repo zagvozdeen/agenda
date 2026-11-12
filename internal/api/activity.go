@@ -25,6 +25,9 @@ func (a *API) ListActivity(ctx context.Context, input ListActivityInput) (any, e
 		if err = validTaskID(*input.TaskID); err != nil {
 			return nil, err
 		}
+		if _, err = a.board(ctx, strings.SplitN(*input.TaskID, "-", 2)[0], false, false); err != nil {
+			return nil, err
+		}
 		if input.BoardKey != nil && strings.SplitN(*input.TaskID, "-", 2)[0] != *input.BoardKey {
 			return nil, invalid("task does not belong to the selected board")
 		}
@@ -36,7 +39,7 @@ func (a *API) ListActivity(ctx context.Context, input ListActivityInput) (any, e
 			return nil, store.ErrTaskNotFound
 		}
 	}
-	events, err := a.store.ListActivity(ctx, store.ActivityFilter{BoardKey: input.BoardKey, TaskID: input.TaskID, ActorID: input.ActorID, Limit: limit, Offset: input.Offset})
+	events, err := a.store.ListActivity(ctx, store.ActivityFilter{ViewerID: viewerID(ctx), BoardKey: input.BoardKey, TaskID: input.TaskID, ActorID: input.ActorID, Limit: limit, Offset: input.Offset})
 	if err != nil {
 		return nil, err
 	}

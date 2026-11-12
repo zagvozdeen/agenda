@@ -158,9 +158,7 @@ func (a *Application) servePreview(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to render preview", http.StatusInternalServerError)
 		return
 	}
-	if r.URL.Query().Get("v") == key {
-		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-	}
+	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Content-Type", "image/png")
 	w.Header().Set("ETag", "\""+key+"\"")
 	http.ServeContent(w, r, id+".png", time.Time{}, bytes.NewReader(data))
@@ -176,11 +174,17 @@ func (a *Application) loadPreview(ctx context.Context, id string) (previewCard, 
 		if err != nil {
 			return previewCard{}, err
 		}
+		if board.IsPrivate {
+			return previewCard{}, store.ErrTaskNotFound
+		}
 		return previewCard{Kind: "task", ID: id, Title: task.Title, Board: board.Name}, nil
 	}
 	board, err := a.store.GetBoard(ctx, id, false)
 	if err != nil {
 		return previewCard{}, err
+	}
+	if board.IsPrivate {
+		return previewCard{}, store.ErrBoardNotFound
 	}
 	return previewCard{Kind: "board", ID: id, Title: board.Name}, nil
 }

@@ -29,7 +29,7 @@ type Storage interface {
 	AuthenticateToken(ctx context.Context, hash string) (*models.User, error)
 
 	GetBoard(ctx context.Context, key string, lock bool) (*models.Board, error)
-	ListBoards(ctx context.Context, memberID *uuid.UUID, limit, offset int) ([]models.Board, error)
+	ListBoards(ctx context.Context, memberID, viewerID *uuid.UUID, limit, offset int) ([]models.Board, error)
 	CreateBoard(ctx context.Context, board *models.Board) error
 	UpdateBoard(ctx context.Context, board *models.Board) error
 	DeleteBoard(ctx context.Context, key string) error
@@ -64,7 +64,7 @@ type Storage interface {
 	UpdateChecklist(ctx context.Context, taskID string, items []models.ChecklistItem) (time.Time, error)
 
 	GetTaskLink(ctx context.Context, from, to string, kind enums.LinkType) (*models.TaskLink, error)
-	ListTaskLinks(ctx context.Context, id string) ([]models.TaskLink, error)
+	ListTaskLinks(ctx context.Context, id string, viewerID *uuid.UUID) ([]models.TaskLink, error)
 	GetCodeLink(ctx context.Context, id uuid.UUID) (*models.CodeLink, error)
 	ListCodeLinks(ctx context.Context, taskID string) ([]models.CodeLink, error)
 	ListCodeLinksForTasks(ctx context.Context, taskIDs []string) (map[string][]models.CodeLink, error)

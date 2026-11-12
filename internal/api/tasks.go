@@ -117,7 +117,7 @@ func (a *API) GetTask(ctx context.Context, input TaskInput) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	view.Links, err = a.store.ListTaskLinks(ctx, task.ID)
+	view.Links, err = a.store.ListTaskLinks(ctx, task.ID, viewerID(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +125,7 @@ func (a *API) GetTask(ctx context.Context, input TaskInput) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	view.Events, err = a.store.ListActivity(ctx, store.ActivityFilter{TaskID: &task.ID})
+	view.Events, err = a.store.ListActivity(ctx, store.ActivityFilter{TaskID: &task.ID, ViewerID: viewerID(ctx)})
 	return view, err
 }
 
@@ -296,6 +296,7 @@ func (a *API) SearchTasks(ctx context.Context, input SearchTasksInput) (any, err
 		return nil, invalid("sort direction must be asc or desc")
 	}
 	tasks, err := a.store.SearchTasks(ctx, store.TaskFilter{
+		ViewerID: viewerID(ctx),
 		BoardKey: input.BoardKey, Query: input.Query, AssigneeID: input.AssigneeID, CreatedBy: input.CreatedBy,
 		SprintNumber: input.SprintNumber, ParentID: input.ParentID, Type: input.Type, Status: input.Status, Priority: input.Priority,
 		Backlog: input.Backlog, Unassigned: input.Unassigned, Sort: input.Sort, Direction: input.Direction, Limit: limit, Offset: input.Offset,

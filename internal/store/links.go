@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"uuid"
 
 	"github.com/jackc/pgx/v5"
 	"gitverse.ru/zagvozdeen/agenda/internal/models"
@@ -52,11 +53,11 @@ func (s *Store) DeleteTaskLink(ctx context.Context, from, to string, kind enums.
 	return nil
 }
 
-func (s *Store) ListTaskLinks(ctx context.Context, id string) ([]models.TaskLink, error) {
+func (s *Store) ListTaskLinks(ctx context.Context, id string, viewerID *uuid.UUID) ([]models.TaskLink, error) {
 	rows, err := s.querier(ctx).Query(
 		ctx,
-		"SELECT l.from_task_id, l.to_task_id, l.type, l.created_by, l.created_at FROM task_links AS l JOIN tasks AS f ON f.id = l.from_task_id JOIN tasks AS t ON t.id = l.to_task_id JOIN boards AS fb ON fb.key = f.board_key JOIN boards AS tb ON tb.key = t.board_key WHERE (l.from_task_id = $1 OR l.to_task_id = $1) AND f.deleted_at IS NULL AND t.deleted_at IS NULL AND fb.deleted_at IS NULL AND tb.deleted_at IS NULL ORDER BY l.created_at, l.from_task_id, l.to_task_id, l.type",
-		id,
+		"SELECT l.from_task_id, l.to_task_id, l.type, l.created_by, l.created_at FROM task_links AS l JOIN tasks AS f ON f.id = l.from_task_id JOIN tasks AS t ON t.id = l.to_task_id JOIN boards AS fb ON fb.key = f.board_key JOIN boards AS tb ON tb.key = t.board_key WHERE (l.from_task_id = $1 OR l.to_task_id = $1) AND f.deleted_at IS NULL AND t.deleted_at IS NULL AND fb.deleted_at IS NULL AND tb.deleted_at IS NULL AND (NOT fb.is_private OR EXISTS (SELECT 1 FROM board_members AS v WHERE v.board_key = fb.key AND v.user_id = $2)) AND (NOT tb.is_private OR EXISTS (SELECT 1 FROM board_members AS v WHERE v.board_key = tb.key AND v.user_id = $2)) ORDER BY l.created_at, l.from_task_id, l.to_task_id, l.type",
+		id, viewerID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list task links: %w", err)

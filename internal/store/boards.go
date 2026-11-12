@@ -16,7 +16,7 @@ var (
 	ErrBoardMemberNotFound = errors.New("board member not found")
 )
 
-const boardColumns = "key, name, description, task_seq, sprint_seq, created_by, created_at, updated_at, deleted_at"
+const boardColumns = "key, name, description, is_private, task_seq, sprint_seq, created_by, created_at, updated_at, deleted_at"
 
 func (s *Store) GetBoard(ctx context.Context, key string, lock bool) (*models.Board, error) {
 	query := "SELECT " + boardColumns + " FROM boards WHERE key = $1 AND deleted_at IS NULL"
@@ -28,7 +28,7 @@ func (s *Store) GetBoard(ctx context.Context, key string, lock bool) (*models.Bo
 		ctx,
 		query,
 		key,
-	).Scan(&board.Key, &board.Name, &board.Description, &board.TaskSeq, &board.SprintSeq, &board.CreatedBy, &board.CreatedAt, &board.UpdatedAt, &board.DeletedAt)
+	).Scan(&board.Key, &board.Name, &board.Description, &board.IsPrivate, &board.TaskSeq, &board.SprintSeq, &board.CreatedBy, &board.CreatedAt, &board.UpdatedAt, &board.DeletedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrBoardNotFound
@@ -38,11 +38,11 @@ func (s *Store) GetBoard(ctx context.Context, key string, lock bool) (*models.Bo
 	return board, nil
 }
 
-func (s *Store) ListBoards(ctx context.Context, memberID *uuid.UUID, limit, offset int) ([]models.Board, error) {
+func (s *Store) ListBoards(ctx context.Context, memberID, viewerID *uuid.UUID, limit, offset int) ([]models.Board, error) {
 	rows, err := s.querier(ctx).Query(
 		ctx,
-		"SELECT "+boardColumns+" FROM boards AS b WHERE deleted_at IS NULL AND ($1::uuid IS NULL OR EXISTS (SELECT 1 FROM board_members AS m WHERE m.board_key = b.key AND m.user_id = $1)) ORDER BY key LIMIT $2 OFFSET $3",
-		memberID, limit, offset,
+		"SELECT "+boardColumns+" FROM boards AS b WHERE deleted_at IS NULL AND ($1::uuid IS NULL OR EXISTS (SELECT 1 FROM board_members AS m WHERE m.board_key = b.key AND m.user_id = $1)) AND (NOT b.is_private OR EXISTS (SELECT 1 FROM board_members AS v WHERE v.board_key = b.key AND v.user_id = $4)) ORDER BY key LIMIT $2 OFFSET $3",
+		memberID, limit, offset, viewerID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list boards: %w", err)
@@ -51,7 +51,7 @@ func (s *Store) ListBoards(ctx context.Context, memberID *uuid.UUID, limit, offs
 	var boards []models.Board
 	for rows.Next() {
 		var board models.Board
-		err = rows.Scan(&board.Key, &board.Name, &board.Description, &board.TaskSeq, &board.SprintSeq, &board.CreatedBy, &board.CreatedAt, &board.UpdatedAt, &board.DeletedAt)
+		err = rows.Scan(&board.Key, &board.Name, &board.Description, &board.IsPrivate, &board.TaskSeq, &board.SprintSeq, &board.CreatedBy, &board.CreatedAt, &board.UpdatedAt, &board.DeletedAt)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list boards: %w", err)
 		}
@@ -93,8 +93,8 @@ func (s *Store) ListMemberships(ctx context.Context, userID uuid.UUID) ([]models
 func (s *Store) CreateBoard(ctx context.Context, board *models.Board) error {
 	err := s.querier(ctx).QueryRow(
 		ctx,
-		"INSERT INTO boards (key, name, description, created_by, created_at, updated_at) VALUES ($1, $2, $3, $4, now(), now()) RETURNING created_at, updated_at",
-		board.Key, board.Name, board.Description, board.CreatedBy,
+		"INSERT INTO boards (key, name, description, is_private, created_by, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, now(), now()) RETURNING created_at, updated_at",
+		board.Key, board.Name, board.Description, board.IsPrivate, board.CreatedBy,
 	).Scan(&board.CreatedAt, &board.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("failed to create board: %w", err)
@@ -105,8 +105,8 @@ func (s *Store) CreateBoard(ctx context.Context, board *models.Board) error {
 func (s *Store) UpdateBoard(ctx context.Context, board *models.Board) error {
 	err := s.querier(ctx).QueryRow(
 		ctx,
-		"UPDATE boards SET name = $2, description = $3, updated_at = now() WHERE key = $1 RETURNING updated_at",
-		board.Key, board.Name, board.Description,
+		"UPDATE boards SET name = $2, description = $3, is_private = $4, updated_at = now() WHERE key = $1 RETURNING updated_at",
+		board.Key, board.Name, board.Description, board.IsPrivate,
 	).Scan(&board.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

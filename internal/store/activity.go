@@ -10,6 +10,7 @@ import (
 )
 
 type ActivityFilter struct {
+	ViewerID *uuid.UUID
 	BoardKey *string
 	TaskID   *string
 	ActorID  *uuid.UUID
@@ -30,8 +31,12 @@ func (s *Store) CreateTaskEvent(ctx context.Context, event *models.TaskEvent) er
 }
 
 func (s *Store) ListActivity(ctx context.Context, filter ActivityFilter) ([]models.TaskEvent, error) {
-	where := []string{"b.deleted_at IS NULL"}
-	var args []any
+	where := []string{
+		"b.deleted_at IS NULL",
+		"(NOT b.is_private OR EXISTS (SELECT 1 FROM board_members AS v WHERE v.board_key = b.key AND v.user_id = $1))",
+		"(e.field IS DISTINCT FROM 'link' OR NOT EXISTS (SELECT 1 FROM boards AS lb WHERE lb.key IN (split_part(COALESCE(e.new_value, e.old_value)->>'from_task_id', '-', 1), split_part(COALESCE(e.new_value, e.old_value)->>'to_task_id', '-', 1)) AND (lb.deleted_at IS NOT NULL OR (lb.is_private AND NOT EXISTS (SELECT 1 FROM board_members AS v WHERE v.board_key = lb.key AND v.user_id = $1)))))",
+	}
+	args := []any{filter.ViewerID}
 	add := func(expression string, value any) {
 		args = append(args, value)
 		where = append(where, fmt.Sprintf(expression, len(args)))

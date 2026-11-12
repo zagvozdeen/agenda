@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"strings"
+	"uuid"
 
 	"gitverse.ru/zagvozdeen/agenda/internal/models"
 	"gitverse.ru/zagvozdeen/agenda/internal/store"
@@ -20,6 +21,13 @@ func withActor(ctx context.Context, user *models.User) context.Context {
 func actor(ctx context.Context) *models.User {
 	u, _ := ctx.Value(actorKey{}).(*models.User)
 	return u
+}
+
+func viewerID(ctx context.Context) *uuid.UUID {
+	if user := actor(ctx); user != nil {
+		return &user.ID
+	}
+	return nil
 }
 
 func (a *API) authenticateToken(ctx context.Context, token string) (*models.User, error) {

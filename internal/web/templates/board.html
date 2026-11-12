@@ -32,7 +32,7 @@
       </section>{{end}}
     </div>
     {{end}}
-    <footer class="page-footer"><span>{{if and .Board.Key (ne .Board.Key "all")}}{{.Board.Key}} / {{end}}{{.Board.Subtitle}}</span><span class="board__total" aria-live="polite">{{taskCount .Board.Count}}</span></footer>
+    <footer class="page-footer"><span>{{if and .Board.Key (ne .Board.Key "all")}}{{.Board.Key}} · {{end}}{{.Board.Subtitle}}</span><span class="board__total" aria-live="polite">{{taskCount .Board.Count}}</span></footer>
   </main>
 </div>
 {{end}}

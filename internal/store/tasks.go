@@ -17,6 +17,7 @@ var ErrTaskNotFound = errors.New("task not found")
 const taskColumns = "t.id, t.board_key, t.number, t.title, t.description, t.type, t.status, t.priority, t.assignee_id, t.created_by, t.sprint_number, t.parent_id, t.estimate_hours, t.idempotency_key, t.created_at, t.updated_at, t.completed_at, t.deleted_at, t.deadline"
 
 type TaskFilter struct {
+	ViewerID     *uuid.UUID
 	BoardKey     *string
 	Query        *string
 	AssigneeID   *uuid.UUID
@@ -223,8 +224,8 @@ func (s *Store) ListUnfinishedTasks(ctx context.Context, key string, number int)
 }
 
 func (s *Store) SearchTasks(ctx context.Context, filter TaskFilter) ([]models.Task, error) {
-	where := []string{"t.deleted_at IS NULL", "b.deleted_at IS NULL"}
-	args := []any{}
+	where := []string{"t.deleted_at IS NULL", "b.deleted_at IS NULL", "(NOT b.is_private OR EXISTS (SELECT 1 FROM board_members AS v WHERE v.board_key = b.key AND v.user_id = $1))"}
+	args := []any{filter.ViewerID}
 	add := func(expression string, value any) {
 		args = append(args, value)
 		where = append(where, fmt.Sprintf(expression, len(args)))

@@ -11,10 +11,10 @@ import (
 )
 
 func (a *API) registerBoards() {
-	registerTool(a, "list_boards", "List non-deleted boards. Reading is public.", true, true, a.ListBoards)
+	registerTool(a, "list_boards", "List public boards and private boards the authenticated user belongs to.", true, true, a.ListBoards)
 	registerTool(a, "get_board", "Get a board, members, active sprint and task counts by status.", true, true, a.GetBoard)
 	registerTool(a, "create_board", "Create a board. The authenticated creator becomes its owner.", false, false, a.CreateBoard)
-	registerTool(a, "update_board", "Update a board name or description. Only owners may do this.", false, false, a.UpdateBoard)
+	registerTool(a, "update_board", "Update a board name, description or privacy. Only owners may do this.", false, false, a.UpdateBoard)
 	registerTool(a, "delete_board", "Soft-delete a board. Only owners may do this.", false, false, a.DeleteBoard)
 	registerTool(a, "add_member", "Add a member or change their role. Owner only; the last owner cannot be demoted.", false, false, a.AddMember)
 	registerTool(a, "remove_member", "Remove a board member. Owner only; the last owner cannot be removed.", false, false, a.RemoveMember)
@@ -25,7 +25,7 @@ func (a *API) ListBoards(ctx context.Context, input ListBoardsInput) (any, error
 	if err != nil {
 		return nil, err
 	}
-	boards, err := a.store.ListBoards(ctx, input.MemberID, limit, input.Offset)
+	boards, err := a.store.ListBoards(ctx, input.MemberID, viewerID(ctx), limit, input.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +58,7 @@ func (a *API) CreateBoard(ctx context.Context, input CreateBoardInput) (any, err
 	if err != nil {
 		return nil, err
 	}
-	board := &models.Board{Key: input.BoardKey, Name: name, Description: input.Description, CreatedBy: actor(ctx).ID}
+	board := &models.Board{Key: input.BoardKey, Name: name, Description: input.Description, IsPrivate: input.IsPrivate, CreatedBy: actor(ctx).ID}
 	if err = a.store.CreateBoard(ctx, board); err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func (a *API) UpdateBoard(ctx context.Context, input UpdateBoardInput) (any, err
 	if err != nil {
 		return nil, err
 	}
-	if input.Name == nil && !input.Description.Set {
+	if input.Name == nil && !input.Description.Set && input.IsPrivate == nil {
 		return nil, invalid("at least one board field must be provided")
 	}
 	before := *board
@@ -86,6 +86,9 @@ func (a *API) UpdateBoard(ctx context.Context, input UpdateBoardInput) (any, err
 	}
 	if input.Description.Set {
 		board.Description = input.Description.Value
+	}
+	if input.IsPrivate != nil {
+		board.IsPrivate = *input.IsPrivate
 	}
 	if !reflect.DeepEqual(before, *board) {
 		if err = a.store.UpdateBoard(ctx, board); err != nil {

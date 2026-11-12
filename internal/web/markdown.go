@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"regexp"
+	"strings"
 
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/yuin/goldmark"
@@ -27,5 +28,8 @@ func renderMarkdown(value string) (template.HTML, error) {
 	if err := markdownRenderer.Convert([]byte(value), &output); err != nil {
 		return "", fmt.Errorf("failed to render markdown: %w", err)
 	}
-	return template.HTML(markdownPolicy.SanitizeBytes(output.Bytes())), nil
+	html := string(markdownPolicy.SanitizeBytes(output.Bytes()))
+	html = strings.ReplaceAll(html, "<table>", "<div class=\"prose__table\" tabindex=\"0\" role=\"region\" aria-label=\"Таблица\"><table>")
+	html = strings.ReplaceAll(html, "</table>", "</table></div>")
+	return template.HTML(html), nil
 }

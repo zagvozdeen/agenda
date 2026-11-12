@@ -29,12 +29,14 @@ type CreateBoardInput struct {
 	BoardKey    string  `json:"board_key" jsonschema:"Immutable board key consisting of three uppercase Latin letters."`
 	Name        string  `json:"name" jsonschema:"Board name."`
 	Description *string `json:"description,omitempty" jsonschema:"Board description."`
+	IsPrivate   bool    `json:"is_private,omitempty" jsonschema:"Hide the board from public access; default false."`
 }
 
 type UpdateBoardInput struct {
 	BoardKey    string           `json:"board_key" jsonschema:"Board key."`
 	Name        *string          `json:"name,omitempty" jsonschema:"New board name."`
 	Description Optional[string] `json:"description,omitzero" jsonschema:"New board description."`
+	IsPrivate   *bool            `json:"is_private,omitempty" jsonschema:"Whether the board is accessible only to its members."`
 }
 
 type AddMemberInput struct {

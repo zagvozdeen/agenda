@@ -57,6 +57,18 @@ func (a *API) board(ctx context.Context, key string, write, ownerOnly bool) (*mo
 	if err != nil {
 		return nil, err
 	}
+	if board.IsPrivate && !write {
+		user := actor(ctx)
+		if user == nil {
+			return nil, store.ErrBoardNotFound
+		}
+		if _, err = a.store.GetBoardRole(ctx, key, user.ID); err != nil {
+			if errors.Is(err, store.ErrBoardMemberNotFound) {
+				return nil, store.ErrBoardNotFound
+			}
+			return nil, err
+		}
+	}
 	if write {
 		user := actor(ctx)
 		if user == nil {
@@ -80,7 +92,17 @@ func (a *API) task(ctx context.Context, id string) (*models.Task, error) {
 	if err := validTaskID(id); err != nil {
 		return nil, err
 	}
-	return a.store.GetTask(ctx, id)
+	task, err := a.store.GetTask(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if _, err = a.board(ctx, task.BoardKey, false, false); err != nil {
+		if errors.Is(err, store.ErrBoardNotFound) {
+			return nil, store.ErrTaskNotFound
+		}
+		return nil, err
+	}
+	return task, nil
 }
 
 func (a *API) writableTask(ctx context.Context, id string) (*models.Task, error) {
