@@ -16,7 +16,7 @@ import (
 
 func (a *API) registerTasks() {
 	registerTool(a, "create_task", "Create a task or subtask with an automatically assigned ID. Requires board membership.", false, false, a.CreateTask)
-	registerTool(a, "get_task", "Get a task with its deadline, code links and diff totals, subtasks, task links, comments and events.", true, true, a.GetTask)
+	registerTool(a, "get_task", "Get a task with its ordered checklist, deadline, code links and diff totals, subtasks, task links, comments and events.", true, true, a.GetTask)
 	registerTool(a, "update_task", "Update mutable task fields. Board key and task number are immutable. Requires board membership.", false, false, a.UpdateTask)
 	registerTool(a, "delete_task", "Soft-delete a task. Delete its non-deleted children first. Requires board membership.", false, false, a.DeleteTask)
 	registerTool(a, "search_tasks", "Search current task fields with filters, full-text search and sorting. Historical assignments and sprint membership are not searched.", true, true, a.SearchTasks)
@@ -100,6 +100,10 @@ func (a *API) GetTask(ctx context.Context, input TaskInput) (any, error) {
 		return nil, err
 	}
 	view := &models.TaskView{Task: *task}
+	view.Checklist, err = a.store.GetChecklist(ctx, task.ID)
+	if err != nil {
+		return nil, err
+	}
 	view.CodeLinks, err = a.store.ListCodeLinks(ctx, task.ID)
 	if err != nil {
 		return nil, err

@@ -41,6 +41,7 @@ func NewApplication(cfg *config.Config, log *slog.Logger, storage store.Storage,
 	a.registerBoards()
 	a.registerSprints()
 	a.registerTasks()
+	a.registerChecklist()
 	a.registerCodeLinks()
 	a.registerComments()
 	a.registerActivity()

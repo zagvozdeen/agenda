@@ -99,14 +99,16 @@ type Comment struct {
 
 type TaskPage struct {
 	models.Task
-	CodeLinks   []models.CodeLink
-	CodeChanges models.CodeSummary
-	BoardName   string
-	Assignee    Person
-	Creator     Person
-	Sprint      string
-	Related     []RelatedTask
-	Comments    []Comment
+	Checklist     []models.ChecklistItem
+	ChecklistDone int
+	CodeLinks     []models.CodeLink
+	CodeChanges   models.CodeSummary
+	BoardName     string
+	Assignee      Person
+	Creator       Person
+	Sprint        string
+	Related       []RelatedTask
+	Comments      []Comment
 }
 
 func (a *Application) boardPage(r *http.Request) (*Page, error) {
@@ -361,6 +363,15 @@ func (a *Application) taskPage(r *http.Request, id string) (*Page, error) {
 	}
 	people := peopleMap(users)
 	view := &TaskPage{Task: *task, BoardName: board.Name, Assignee: lookupPerson(people, task.AssigneeID), Creator: lookupPerson(people, &task.CreatedBy), Sprint: "Без спринта"}
+	view.Checklist, err = a.store.GetChecklist(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	for _, item := range view.Checklist {
+		if item.Done {
+			view.ChecklistDone++
+		}
+	}
 	view.CodeLinks, err = a.store.ListCodeLinks(ctx, id)
 	if err != nil {
 		return nil, err

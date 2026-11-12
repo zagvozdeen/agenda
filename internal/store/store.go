@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"log/slog"
+	"time"
 	"uuid"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -59,6 +60,8 @@ type Storage interface {
 	ListSubtasks(ctx context.Context, id string) ([]models.Task, error)
 	ListUnfinishedTasks(ctx context.Context, key string, number int) ([]models.Task, error)
 	SearchTasks(ctx context.Context, filter TaskFilter) ([]models.Task, error)
+	GetChecklist(ctx context.Context, taskID string) ([]models.ChecklistItem, error)
+	UpdateChecklist(ctx context.Context, taskID string, items []models.ChecklistItem) (time.Time, error)
 
 	GetTaskLink(ctx context.Context, from, to string, kind enums.LinkType) (*models.TaskLink, error)
 	ListTaskLinks(ctx context.Context, id string) ([]models.TaskLink, error)
