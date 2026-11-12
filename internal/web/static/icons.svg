@@ -13,4 +13,12 @@
   <symbol id="bug" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="13" rx="5"/><path d="M9 7 7 4m8 3 2-3M3 10h4m10 0h4M3 16h4m10 0h4M12 8v11"/></symbol>
   <symbol id="wrench" viewBox="0 0 24 24"><path d="M14 5a5 5 0 0 0-6 6L3.5 15.5a3.5 3.5 0 0 0 5 5L13 16a5 5 0 0 0 6-6l-4 3-4-4Z"/></symbol>
   <symbol id="refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5M5.2 8a7.5 7.5 0 0 1 12-3L20 8M4 16l2.8 3a7.5 7.5 0 0 0 12-3"/></symbol>
+  <symbol id="panel" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></symbol>
+  <symbol id="panel-close" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16m7-11-3 3 3 3"/></symbol>
+  <symbol id="circle-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></symbol>
+  <symbol id="circle-open" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-dasharray="3 4"/></symbol>
+  <symbol id="code-changes" viewBox="0 0 24 24"><path d="M8 3 4 7l4 4M4 7h12a4 4 0 0 1 4 4M16 21l4-4-4-4m4 4H8a4 4 0 0 1-4-4"/></symbol>
+  <symbol id="git-pull-request" viewBox="0 0 24 24"><circle cx="6" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="19" r="2"/><path d="M6 7v10m12 0V9a4 4 0 0 0-4-4h-2m3-3-3 3 3 3"/></symbol>
+  <symbol id="git-commit" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M3 12h5m8 0h5"/></symbol>
+  <symbol id="calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></symbol>
 </svg>

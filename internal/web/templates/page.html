@@ -37,18 +37,12 @@
 
 {{define "workspace"}}
 <div class="workspace" id="workspace" data-page="{{.Kind}}" data-title="{{.Meta.Title}}" data-description="{{.Meta.Description}}" data-canonical="{{.Meta.URL}}" data-image="{{.Meta.Image}}" data-image-alt="{{.Meta.ImageAlt}}">
-  <aside class="sidebar" aria-label="Agenda">
-    <a class="sidebar__logo" href="/" aria-label="Agenda — главная"><svg class="icon sidebar__logo-icon" aria-hidden="true"><use href="/static/icons.svg#asterisk"></use></svg></a>
-    <a class="sidebar__link{{if eq .Kind "board"}} sidebar__link--current{{end}}" href="/" aria-label="Канбан" {{if eq .Kind "board"}}aria-current="page"{{end}}><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#columns"></use></svg></a>
-    <span class="sidebar__wordmark">AGENDA</span>
-  </aside>
   <div class="workspace__window">
     <header class="topbar">
       <a class="topbar__wordmark" href="/">agenda</a>
       <span class="topbar__separator" aria-hidden="true">/</span>
-      {{if .Board}}<span class="topbar__context">{{if and .Board.Key (ne .Board.Key "all")}}<span class="mono topbar__key">{{.Board.Key}}</span><span class="topbar__dot">·</span>{{end}}{{.Board.Name}}</span>{{else if .Task}}<a class="topbar__context topbar__context--link" href="/{{.Task.BoardKey}}"><span class="mono topbar__key">{{.Task.BoardKey}}</span><span class="topbar__dot">·</span>{{.Task.BoardName}}</a>{{else}}<span class="topbar__context">Рабочее пространство</span>{{end}}
-      <span class="topbar__suffix mono">{{if .Task}}/{{.Task.ID}}{{else}}workspace{{end}}</span>
-      <span class="topbar__badge" aria-label="Agenda">A</span>
+      {{if .Board}}<span class="topbar__context">{{if and .Board.Key (ne .Board.Key "all")}}<span class="mono topbar__key">{{.Board.Key}}</span><span class="topbar__dot">·</span>{{end}}Канбан</span>{{else if .Task}}<a class="topbar__context topbar__context--link" href="/{{.Task.BoardKey}}"><span class="mono topbar__key">{{.Task.BoardKey}}</span><span class="topbar__dot">·</span>{{.Task.BoardName}}</a>{{end}}
+      {{if .Board}}<button class="button topbar__filters" type="button" data-open-filters aria-controls="board-filters" aria-expanded="false" hidden><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#panel"></use></svg>Фильтры</button>{{else if .Task}}<span class="topbar__suffix mono">{{.Task.ID}}</span>{{end}}
     </header>
     {{if eq .Kind "board"}}{{template "board" .}}{{else if eq .Kind "task"}}{{template "task" .}}{{else}}
     <main class="error-page" id="main"><span class="error-page__code mono">{{.ErrorCode}}</span><h1 class="page-title">{{.Error}}</h1><a class="button" href="/">Вернуться к доске<svg class="icon" aria-hidden="true"><use href="/static/icons.svg#arrow-right"></use></svg></a></main>

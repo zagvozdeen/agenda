@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"reflect"
+	"time"
 	"uuid"
 
 	"github.com/google/jsonschema-go/jsonschema"
@@ -27,6 +28,8 @@ func registerTool[In any](a *API, name, description string, readOnly, public boo
 			reflect.TypeFor[Optional[uuid.UUID]](): nullable(uuidSchema),
 			reflect.TypeFor[Optional[string]]():    nullable(&jsonschema.Schema{Type: "string"}),
 			reflect.TypeFor[Optional[int]]():       nullable(&jsonschema.Schema{Type: "integer"}),
+			reflect.TypeFor[Optional[time.Time]](): nullable(&jsonschema.Schema{Type: "string", Format: "date-time"}),
+			reflect.TypeFor[enums.CodeLinkType]():  {Type: "string", Enum: []any{"commit", "pull_request"}},
 			reflect.TypeFor[enums.BoardRole]():     {Type: "string", Enum: []any{"owner", "member"}},
 			reflect.TypeFor[enums.TaskType]():      {Type: "string", Enum: []any{"feature", "bug", "chore"}},
 			reflect.TypeFor[enums.TaskStatus]():    {Type: "string", Enum: []any{"todo", "in_progress", "review", "done", "cancelled"}},
@@ -106,6 +109,7 @@ func (a *API) toolFailure(ctx context.Context, name string, err error) *mcp.Call
 		errors.Is(err, store.ErrSprintNotFound) ||
 		errors.Is(err, store.ErrTaskNotFound) ||
 		errors.Is(err, store.ErrTaskLinkNotFound) ||
+		errors.Is(err, store.ErrCodeLinkNotFound) ||
 		errors.Is(err, store.ErrCommentNotFound) ||
 		errors.Is(err, store.ErrUserNotFound) {
 		return toolError("not_found", err.Error())

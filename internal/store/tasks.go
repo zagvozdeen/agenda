@@ -14,7 +14,7 @@ import (
 
 var ErrTaskNotFound = errors.New("task not found")
 
-const taskColumns = "t.id, t.board_key, t.number, t.title, t.description, t.type, t.status, t.priority, t.assignee_id, t.created_by, t.sprint_number, t.parent_id, t.estimate_hours, t.idempotency_key, t.created_at, t.updated_at, t.completed_at, t.deleted_at"
+const taskColumns = "t.id, t.board_key, t.number, t.title, t.description, t.type, t.status, t.priority, t.assignee_id, t.created_by, t.sprint_number, t.parent_id, t.estimate_hours, t.idempotency_key, t.created_at, t.updated_at, t.completed_at, t.deleted_at, t.deadline"
 
 type TaskFilter struct {
 	BoardKey     *string
@@ -40,7 +40,7 @@ func (s *Store) GetTask(ctx context.Context, id string) (*models.Task, error) {
 		ctx,
 		"SELECT "+taskColumns+" FROM tasks AS t JOIN boards AS b ON b.key = t.board_key WHERE t.id = $1 AND t.deleted_at IS NULL AND b.deleted_at IS NULL",
 		id,
-	).Scan(&task.ID, &task.BoardKey, &task.Number, &task.Title, &task.Description, &task.Type, &task.Status, &task.Priority, &task.AssigneeID, &task.CreatedBy, &task.SprintNumber, &task.ParentID, &task.EstimateHours, &task.IdempotencyKey, &task.CreatedAt, &task.UpdatedAt, &task.CompletedAt, &task.DeletedAt)
+	).Scan(&task.ID, &task.BoardKey, &task.Number, &task.Title, &task.Description, &task.Type, &task.Status, &task.Priority, &task.AssigneeID, &task.CreatedBy, &task.SprintNumber, &task.ParentID, &task.EstimateHours, &task.IdempotencyKey, &task.CreatedAt, &task.UpdatedAt, &task.CompletedAt, &task.DeletedAt, &task.Deadline)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrTaskNotFound
@@ -81,7 +81,7 @@ func (s *Store) GetTaskByIdempotency(ctx context.Context, key uuid.UUID) (*model
 		ctx,
 		"SELECT "+taskColumns+" FROM tasks AS t WHERE t.idempotency_key = $1",
 		key,
-	).Scan(&task.ID, &task.BoardKey, &task.Number, &task.Title, &task.Description, &task.Type, &task.Status, &task.Priority, &task.AssigneeID, &task.CreatedBy, &task.SprintNumber, &task.ParentID, &task.EstimateHours, &task.IdempotencyKey, &task.CreatedAt, &task.UpdatedAt, &task.CompletedAt, &task.DeletedAt)
+	).Scan(&task.ID, &task.BoardKey, &task.Number, &task.Title, &task.Description, &task.Type, &task.Status, &task.Priority, &task.AssigneeID, &task.CreatedBy, &task.SprintNumber, &task.ParentID, &task.EstimateHours, &task.IdempotencyKey, &task.CreatedAt, &task.UpdatedAt, &task.CompletedAt, &task.DeletedAt, &task.Deadline)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrTaskNotFound
@@ -105,8 +105,8 @@ func (s *Store) CreateTask(ctx context.Context, task *models.Task) error {
 	}
 	err = s.querier(ctx).QueryRow(
 		ctx,
-		"INSERT INTO tasks (board_key, number, title, description, type, status, priority, assignee_id, created_by, sprint_number, parent_id, estimate_hours, idempotency_key, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, now(), now()) RETURNING id, created_at, updated_at",
-		task.BoardKey, task.Number, task.Title, task.Description, task.Type, task.Status, task.Priority, task.AssigneeID, task.CreatedBy, task.SprintNumber, task.ParentID, task.EstimateHours, task.IdempotencyKey,
+		"INSERT INTO tasks (board_key, number, title, description, type, status, priority, assignee_id, created_by, sprint_number, parent_id, estimate_hours, idempotency_key, deadline, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, now(), now()) RETURNING id, created_at, updated_at",
+		task.BoardKey, task.Number, task.Title, task.Description, task.Type, task.Status, task.Priority, task.AssigneeID, task.CreatedBy, task.SprintNumber, task.ParentID, task.EstimateHours, task.IdempotencyKey, task.Deadline,
 	).Scan(&task.ID, &task.CreatedAt, &task.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("failed to create task: %w", err)
@@ -117,8 +117,8 @@ func (s *Store) CreateTask(ctx context.Context, task *models.Task) error {
 func (s *Store) UpdateTask(ctx context.Context, task *models.Task) error {
 	err := s.querier(ctx).QueryRow(
 		ctx,
-		"UPDATE tasks SET title = $2, description = $3, type = $4, status = $5, priority = $6, assignee_id = $7, sprint_number = $8, parent_id = $9, estimate_hours = $10, completed_at = $11, updated_at = now() WHERE id = $1 RETURNING updated_at",
-		task.ID, task.Title, task.Description, task.Type, task.Status, task.Priority, task.AssigneeID, task.SprintNumber, task.ParentID, task.EstimateHours, task.CompletedAt,
+		"UPDATE tasks SET title = $2, description = $3, type = $4, status = $5, priority = $6, assignee_id = $7, sprint_number = $8, parent_id = $9, estimate_hours = $10, completed_at = $11, deadline = $12, updated_at = now() WHERE id = $1 RETURNING updated_at",
+		task.ID, task.Title, task.Description, task.Type, task.Status, task.Priority, task.AssigneeID, task.SprintNumber, task.ParentID, task.EstimateHours, task.CompletedAt, task.Deadline,
 	).Scan(&task.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -183,7 +183,7 @@ func (s *Store) ListSubtasks(ctx context.Context, id string) ([]models.Task, err
 	var tasks []models.Task
 	for rows.Next() {
 		var task models.Task
-		err = rows.Scan(&task.ID, &task.BoardKey, &task.Number, &task.Title, &task.Description, &task.Type, &task.Status, &task.Priority, &task.AssigneeID, &task.CreatedBy, &task.SprintNumber, &task.ParentID, &task.EstimateHours, &task.IdempotencyKey, &task.CreatedAt, &task.UpdatedAt, &task.CompletedAt, &task.DeletedAt)
+		err = rows.Scan(&task.ID, &task.BoardKey, &task.Number, &task.Title, &task.Description, &task.Type, &task.Status, &task.Priority, &task.AssigneeID, &task.CreatedBy, &task.SprintNumber, &task.ParentID, &task.EstimateHours, &task.IdempotencyKey, &task.CreatedAt, &task.UpdatedAt, &task.CompletedAt, &task.DeletedAt, &task.Deadline)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list subtasks: %w", err)
 		}
@@ -209,7 +209,7 @@ func (s *Store) ListUnfinishedTasks(ctx context.Context, key string, number int)
 	var tasks []models.Task
 	for rows.Next() {
 		var task models.Task
-		err = rows.Scan(&task.ID, &task.BoardKey, &task.Number, &task.Title, &task.Description, &task.Type, &task.Status, &task.Priority, &task.AssigneeID, &task.CreatedBy, &task.SprintNumber, &task.ParentID, &task.EstimateHours, &task.IdempotencyKey, &task.CreatedAt, &task.UpdatedAt, &task.CompletedAt, &task.DeletedAt)
+		err = rows.Scan(&task.ID, &task.BoardKey, &task.Number, &task.Title, &task.Description, &task.Type, &task.Status, &task.Priority, &task.AssigneeID, &task.CreatedBy, &task.SprintNumber, &task.ParentID, &task.EstimateHours, &task.IdempotencyKey, &task.CreatedAt, &task.UpdatedAt, &task.CompletedAt, &task.DeletedAt, &task.Deadline)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list unfinished tasks: %w", err)
 		}
@@ -281,7 +281,7 @@ func (s *Store) SearchTasks(ctx context.Context, filter TaskFilter) ([]models.Ta
 	var tasks []models.Task
 	for rows.Next() {
 		var task models.Task
-		err = rows.Scan(&task.ID, &task.BoardKey, &task.Number, &task.Title, &task.Description, &task.Type, &task.Status, &task.Priority, &task.AssigneeID, &task.CreatedBy, &task.SprintNumber, &task.ParentID, &task.EstimateHours, &task.IdempotencyKey, &task.CreatedAt, &task.UpdatedAt, &task.CompletedAt, &task.DeletedAt)
+		err = rows.Scan(&task.ID, &task.BoardKey, &task.Number, &task.Title, &task.Description, &task.Type, &task.Status, &task.Priority, &task.AssigneeID, &task.CreatedBy, &task.SprintNumber, &task.ParentID, &task.EstimateHours, &task.IdempotencyKey, &task.CreatedAt, &task.UpdatedAt, &task.CompletedAt, &task.DeletedAt, &task.Deadline)
 		if err != nil {
 			return nil, fmt.Errorf("failed to search tasks: %w", err)
 		}

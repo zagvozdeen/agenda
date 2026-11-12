@@ -24,8 +24,10 @@ type BoardView struct {
 
 type TaskView struct {
 	Task
-	Subtasks []Task      `json:"subtasks"`
-	Links    []TaskLink  `json:"links"`
-	Comments []Comment   `json:"comments"`
-	Events   []TaskEvent `json:"events"`
+	CodeLinks   []CodeLink  `json:"code_links"`
+	CodeChanges CodeSummary `json:"code_changes"`
+	Subtasks    []Task      `json:"subtasks"`
+	Links       []TaskLink  `json:"links"`
+	Comments    []Comment   `json:"comments"`
+	Events      []TaskEvent `json:"events"`
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -46,7 +47,9 @@ type Person struct {
 
 type Card struct {
 	models.Task
-	Assignee Person
+	Assignee    Person
+	CodeLinks   []models.CodeLink
+	CodeChanges models.CodeSummary
 }
 
 type Column struct {
@@ -62,6 +65,24 @@ type BoardPage struct {
 	Columns  []Column
 	Count    int
 	HasBoard bool
+	Stats    BoardStats
+	Summary  []StatusCount
+	InSprint bool
+}
+
+type BoardStats struct {
+	Total        int
+	Done         int
+	Open         int
+	Cancelled    int
+	Completion   int
+	ChangedLines int64
+	CodeChanges  models.CodeSummary
+}
+
+type StatusCount struct {
+	Status enums.TaskStatus
+	Count  int
 }
 
 type RelatedTask struct {
@@ -78,12 +99,14 @@ type Comment struct {
 
 type TaskPage struct {
 	models.Task
-	BoardName string
-	Assignee  Person
-	Creator   Person
-	Sprint    string
-	Related   []RelatedTask
-	Comments  []Comment
+	CodeLinks   []models.CodeLink
+	CodeChanges models.CodeSummary
+	BoardName   string
+	Assignee    Person
+	Creator     Person
+	Sprint      string
+	Related     []RelatedTask
+	Comments    []Comment
 }
 
 func (a *Application) boardPage(r *http.Request) (*Page, error) {
@@ -183,6 +206,7 @@ func (a *Application) boardPage(r *http.Request) (*Page, error) {
 		filter.Backlog, view.Subtitle = true, "Без спринта"
 	}
 	view.Selects = append(view.Selects, makeSelect("sprint", "Спринт", sprintOptions))
+	view.InSprint = filter.SprintNumber != nil
 	selectedStatuses := query["columns"]
 	if !query.Has("columns") && !query.Has("columns_set") {
 		selectedStatuses = []string{"todo", "in_progress", "review", "done"}
@@ -219,7 +243,7 @@ func (a *Application) boardPage(r *http.Request) (*Page, error) {
 		{Value: "chore", Label: "Поддержка", Selected: kind == "chore"},
 	}))
 	var tasks []models.Task
-	for offset := 0; len(view.Columns) > 0; offset += filter.Limit {
+	for offset := 0; ; offset += filter.Limit {
 		filter.Offset = offset
 		batch, err := a.store.SearchTasks(ctx, filter)
 		if err != nil {
@@ -236,14 +260,52 @@ func (a *Application) boardPage(r *http.Request) (*Page, error) {
 		}
 		return right.UpdatedAt.Compare(left.UpdatedAt)
 	})
+	taskIDs := make([]string, len(tasks))
+	for index, task := range tasks {
+		taskIDs[index] = task.ID
+	}
+	summaries, err := a.store.CodeLinkSummaries(ctx, taskIDs)
+	if err != nil {
+		return nil, err
+	}
+	codeLinks, err := a.store.ListCodeLinksForTasks(ctx, taskIDs)
+	if err != nil {
+		return nil, err
+	}
+	counts := make(map[enums.TaskStatus]int)
+	var additions, deletions int64
 	for _, task := range tasks {
+		counts[task.Status]++
+		summary := summaries[task.ID]
+		view.Stats.CodeChanges.Links += summary.Links
+		view.Stats.CodeChanges.WithStats += summary.WithStats
+		if summary.Additions != nil {
+			additions += *summary.Additions
+		}
+		if summary.Deletions != nil {
+			deletions += *summary.Deletions
+		}
 		for index := range view.Columns {
 			if view.Columns[index].Status == task.Status {
-				view.Columns[index].Tasks = append(view.Columns[index].Tasks, Card{Task: task, Assignee: lookupPerson(people, task.AssigneeID)})
+				view.Columns[index].Tasks = append(view.Columns[index].Tasks, Card{Task: task, Assignee: lookupPerson(people, task.AssigneeID), CodeLinks: codeLinks[task.ID], CodeChanges: summary})
 				view.Count++
 				break
 			}
 		}
+	}
+	for _, status := range statuses {
+		view.Summary = append(view.Summary, StatusCount{Status: status, Count: counts[status]})
+	}
+	view.Stats.Done = counts[enums.TaskStatusDone]
+	view.Stats.Open = counts[enums.TaskStatusTodo] + counts[enums.TaskStatusInProgress] + counts[enums.TaskStatusReview]
+	view.Stats.Cancelled = counts[enums.TaskStatusCancelled]
+	view.Stats.Total = view.Stats.Done + view.Stats.Open
+	if view.Stats.Total > 0 {
+		view.Stats.Completion = (view.Stats.Done*100 + view.Stats.Total/2) / view.Stats.Total
+	}
+	view.Stats.ChangedLines = additions + deletions
+	if view.Stats.CodeChanges.WithStats > 0 {
+		view.Stats.CodeChanges.Additions, view.Stats.CodeChanges.Deletions = &additions, &deletions
 	}
 	page := &Page{Kind: "board", Board: view}
 	title := view.Name + " — Agenda"
@@ -259,6 +321,28 @@ func (a *Application) boardPage(r *http.Request) (*Page, error) {
 		a.setPreview(&page.Meta, previewCard{Kind: "board", ID: key, Title: view.Name})
 	}
 	return page, nil
+}
+
+func codeLinkLabel(link models.CodeLink) string {
+	if link.Type == enums.CodeLinkTypeCommit && link.HeadSHA != nil {
+		return (*link.HeadSHA)[:min(7, len(*link.HeadSHA))]
+	}
+	u, err := url.Parse(link.URL)
+	if err == nil {
+		parts := strings.Split(strings.TrimRight(u.Path, "/"), "/")
+		last := parts[len(parts)-1]
+		if link.Type == enums.CodeLinkTypePullRequest {
+			if _, err = strconv.ParseUint(last, 10, 64); err == nil {
+				return "PR #" + last
+			}
+		} else if len(last) >= 7 && strings.Trim(last, "0123456789abcdefABCDEF") == "" {
+			return last[:7]
+		}
+	}
+	if link.Type == enums.CodeLinkTypePullRequest {
+		return "Pull request"
+	}
+	return "Коммит"
 }
 
 func (a *Application) taskPage(r *http.Request, id string) (*Page, error) {
@@ -277,6 +361,15 @@ func (a *Application) taskPage(r *http.Request, id string) (*Page, error) {
 	}
 	people := peopleMap(users)
 	view := &TaskPage{Task: *task, BoardName: board.Name, Assignee: lookupPerson(people, task.AssigneeID), Creator: lookupPerson(people, &task.CreatedBy), Sprint: "Без спринта"}
+	view.CodeLinks, err = a.store.ListCodeLinks(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	summaries, err := a.store.CodeLinkSummaries(ctx, []string{id})
+	if err != nil {
+		return nil, err
+	}
+	view.CodeChanges = summaries[id]
 	if task.SprintNumber != nil {
 		sprint, err := a.store.GetSprint(ctx, task.BoardKey, *task.SprintNumber)
 		if err != nil && !errors.Is(err, store.ErrSprintNotFound) {
@@ -432,6 +525,10 @@ func priorityRank(value enums.TaskPriority) int {
 }
 
 func taskCount(count int) string {
+	return strconv.Itoa(count) + " " + taskWord(count)
+}
+
+func taskWord(count int) string {
 	word := "задач"
 	if count%100 < 11 || count%100 > 14 {
 		if count%10 == 1 {
@@ -440,5 +537,5 @@ func taskCount(count int) string {
 			word = "задачи"
 		}
 	}
-	return strconv.Itoa(count) + " " + word
+	return word
 }

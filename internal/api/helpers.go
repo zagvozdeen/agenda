@@ -162,6 +162,17 @@ func parseDate(value *string) (*time.Time, error) {
 	return &date, nil
 }
 
+func validDeadline(value *time.Time) (*time.Time, error) {
+	if value == nil {
+		return nil, nil
+	}
+	if value.Year() < 1 || value.Year() > 9999 {
+		return nil, invalid("deadline year must be between 1 and 9999")
+	}
+	deadline := value.UTC()
+	return &deadline, nil
+}
+
 func validDates(start, end *time.Time) error {
 	if start != nil && end != nil && end.Before(*start) {
 		return invalid("sprint end date must not precede its start date")

@@ -1,4 +1,6 @@
 import { initializeSelects, restoreSelect, closeSelects } from './select.js';
+import { formatDates } from './dates.js';
+import { initializeFilters } from './filters.js';
 
 let controller;
 let sequence = 0;
@@ -92,7 +94,9 @@ async function loadBoard(url, push = true) {
     } : null;
     const hadResetFocus = document.activeElement?.matches('[data-reset-filters]');
     workspace.replaceWith(replacement);
+    initializeFilters(replacement);
     initializeSelects(replacement);
+    formatDates(replacement);
     updateMetadata(replacement);
     if (push && url.href !== location.href) history.pushState(null, '', url);
     if (selection) restoreSelect(selection.name, selection.open, selection.value);

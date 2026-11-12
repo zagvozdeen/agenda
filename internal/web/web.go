@@ -63,13 +63,22 @@ func New(cfg *config.Config, log *slog.Logger, storage store.Storage) (*Applicat
 		}
 	}
 	templates, err := template.New("pages").Funcs(template.FuncMap{
-		"status":      statusLabel,
-		"statusClass": statusClass,
-		"taskType":    typeLabel,
-		"priority":    priorityLabel,
-		"date":        func(value time.Time) string { return value.UTC().Format("02.01.2006, 15:04 UTC") },
-		"isoDate":     func(value time.Time) string { return value.Format(time.RFC3339) },
-		"taskCount":   taskCount,
+		"status":        statusLabel,
+		"statusClass":   statusClass,
+		"taskType":      typeLabel,
+		"priority":      priorityLabel,
+		"date":          func(value time.Time) string { return value.UTC().Format("02.01.2006, 15:04 UTC") },
+		"isoDate":       func(value time.Time) string { return value.Format(time.RFC3339) },
+		"taskCount":     taskCount,
+		"taskWord":      taskWord,
+		"markdown":      renderMarkdown,
+		"codeLinkLabel": codeLinkLabel,
+		"shortSHA": func(value *string) string {
+			if value == nil {
+				return ""
+			}
+			return (*value)[:min(12, len(*value))]
+		},
 	}).ParseFS(files, "templates/*.html")
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse web templates: %w", err)
@@ -168,7 +177,7 @@ func (a *Application) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (a *Application) serveAsset(w http.ResponseWriter, r *http.Request) {
 	name := strings.TrimPrefix(r.URL.Path, "/static/")
 	switch name {
-	case "app.css", "app.js", "board.js", "select.js", "icons.svg", "favicon.svg", "social-preview.png":
+	case "app.css", "app.js", "board.js", "filters.js", "select.js", "dates.js", "icons.svg", "favicon.svg", "social-preview.png":
 	default:
 		http.NotFound(w, r)
 		return

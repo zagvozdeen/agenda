@@ -16,7 +16,7 @@ import (
 
 func (a *API) registerTasks() {
 	registerTool(a, "create_task", "Create a task or subtask with an automatically assigned ID. Requires board membership.", false, false, a.CreateTask)
-	registerTool(a, "get_task", "Get a task with subtasks, incoming and outgoing links, comments and task events.", true, true, a.GetTask)
+	registerTool(a, "get_task", "Get a task with its deadline, code links and diff totals, subtasks, task links, comments and events.", true, true, a.GetTask)
 	registerTool(a, "update_task", "Update mutable task fields. Board key and task number are immutable. Requires board membership.", false, false, a.UpdateTask)
 	registerTool(a, "delete_task", "Soft-delete a task. Delete its non-deleted children first. Requires board membership.", false, false, a.DeleteTask)
 	registerTool(a, "search_tasks", "Search current task fields with filters, full-text search and sorting. Historical assignments and sprint membership are not searched.", true, true, a.SearchTasks)
@@ -31,6 +31,10 @@ func (a *API) CreateTask(ctx context.Context, input CreateTaskInput) (any, error
 	}
 	if input.EstimateHours != nil && (*input.EstimateHours < 0 || *input.EstimateHours > math.MaxInt32) {
 		return nil, invalid("estimate_hours must be a nonnegative 32-bit integer")
+	}
+	deadline, err := validDeadline(input.Deadline)
+	if err != nil {
+		return nil, err
 	}
 	if input.IdempotencyKey != nil {
 		if *input.IdempotencyKey == uuid.Nil() {
@@ -79,6 +83,7 @@ func (a *API) CreateTask(ctx context.Context, input CreateTaskInput) (any, error
 		Type: input.Type, Status: enums.TaskStatusTodo, Priority: input.Priority,
 		AssigneeID: input.AssigneeID, CreatedBy: actor(ctx).ID, SprintNumber: input.SprintNumber,
 		ParentID: input.ParentID, EstimateHours: input.EstimateHours, IdempotencyKey: input.IdempotencyKey,
+		Deadline: deadline,
 	}
 	if err = a.store.CreateTask(ctx, task); err != nil {
 		return nil, err
@@ -95,6 +100,15 @@ func (a *API) GetTask(ctx context.Context, input TaskInput) (any, error) {
 		return nil, err
 	}
 	view := &models.TaskView{Task: *task}
+	view.CodeLinks, err = a.store.ListCodeLinks(ctx, task.ID)
+	if err != nil {
+		return nil, err
+	}
+	summaries, err := a.store.CodeLinkSummaries(ctx, []string{task.ID})
+	if err != nil {
+		return nil, err
+	}
+	view.CodeChanges = summaries[task.ID]
 	view.Subtasks, err = a.store.ListSubtasks(ctx, task.ID)
 	if err != nil {
 		return nil, err
@@ -116,10 +130,19 @@ func (a *API) UpdateTask(ctx context.Context, input UpdateTaskInput) (any, error
 	if err != nil {
 		return nil, err
 	}
-	if input.Title == nil && input.Description == nil && input.Type == nil && input.Status == nil && input.Priority == nil && !input.AssigneeID.Set && !input.SprintNumber.Set && !input.ParentID.Set && !input.EstimateHours.Set {
+	if input.Title == nil && input.Description == nil && input.Type == nil && input.Status == nil && input.Priority == nil && !input.AssigneeID.Set && !input.SprintNumber.Set && !input.ParentID.Set && !input.EstimateHours.Set && !input.Deadline.Set {
 		return nil, invalid("at least one task field must be provided")
 	}
 	before := *task
+	if input.Deadline.Set {
+		deadline, err := validDeadline(input.Deadline.Value)
+		if err != nil {
+			return nil, err
+		}
+		if deadline == nil || task.Deadline == nil || !deadline.Equal(*task.Deadline) {
+			task.Deadline = deadline
+		}
+	}
 	if input.Title != nil {
 		task.Title, err = validName(*input.Title)
 		if err != nil {
@@ -185,6 +208,7 @@ func (a *API) UpdateTask(ctx context.Context, input UpdateTaskInput) (any, error
 		{"priority", before.Priority, task.Priority}, {"assignee_id", before.AssigneeID, task.AssigneeID},
 		{"sprint_number", before.SprintNumber, task.SprintNumber}, {"parent_id", before.ParentID, task.ParentID},
 		{"estimate_hours", before.EstimateHours, task.EstimateHours}, {"completed_at", before.CompletedAt, task.CompletedAt},
+		{"deadline", before.Deadline, task.Deadline},
 	}
 	for _, change := range changes {
 		if !reflect.DeepEqual(change.old, change.value) {
@@ -275,5 +299,17 @@ func (a *API) SearchTasks(ctx context.Context, input SearchTasksInput) (any, err
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"tasks": tasks, "limit": limit, "offset": input.Offset}, nil
+	ids := make([]string, len(tasks))
+	for index, task := range tasks {
+		ids[index] = task.ID
+	}
+	summaries, err := a.store.CodeLinkSummaries(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]models.TaskSummary, len(tasks))
+	for index, task := range tasks {
+		items[index] = models.TaskSummary{Task: task, CodeChanges: summaries[task.ID]}
+	}
+	return map[string]any{"tasks": items, "limit": limit, "offset": input.Offset}, nil
 }

@@ -1,20 +1,25 @@
 {{define "board"}}
 <div class="board">
-  <aside class="filters" aria-label="Фильтры задач">
-    <div class="filters__heading"><svg class="icon filters__icon" aria-hidden="true"><use href="/static/icons.svg#filters"></use></svg><h2 class="filters__title">Фильтры</h2></div>
+  <aside class="filters" id="board-filters" aria-label="Фильтры задач">
+    <div class="filters__heading"><svg class="icon filters__icon" aria-hidden="true"><use href="/static/icons.svg#filters"></use></svg><h2 class="filters__title">Фильтры</h2><button class="filters__collapse" type="button" data-close-filters aria-label="Скрыть фильтры" aria-controls="board-filters" aria-expanded="true" hidden><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#panel-close"></use></svg></button></div>
     <form class="filters__form" action="/" method="get" id="filters-form">
       <input type="hidden" name="columns_set" value="1">
       {{range .Board.Selects}}{{template "select" .}}{{end}}
       <button class="button filters__submit" type="submit">Применить фильтры</button>
     </form>
     <a class="filters__reset" href="/" data-reset-filters><svg class="icon filters__reset-icon" aria-hidden="true"><use href="/static/icons.svg#refresh"></use></svg>Сбросить фильтры</a>
-    <div class="filters__caption">Задачи, исполнители<br>и спринты в одном месте.</div>
+    {{if .Board.HasBoard}}<section class="filters__summary" aria-label="Задачи по статусам"><h3 class="filters__summary-title">{{if .Board.InSprint}}В выбранном спринте{{else}}По текущим фильтрам{{end}}</h3><dl>{{range .Board.Summary}}{{if or .Count (ne .Status "cancelled")}}<div class="filters__status"><dt><span class="status-dot status-dot--{{statusClass .Status}}" aria-hidden="true"></span>{{status .Status}}</dt><dd>{{.Count}}</dd></div>{{end}}{{end}}</dl></section>{{end}}
+    <div class="filters__resize" data-resize-filters role="separator" aria-orientation="vertical" aria-label="Ширина панели фильтров" aria-valuemin="200" aria-valuemax="420" aria-valuenow="226" tabindex="0" hidden></div>
   </aside>
   <main class="board__main" id="main">
     <header class="board__heading">
-      <div><div class="breadcrumbs"><span class="mono">{{if and .Board.Key (ne .Board.Key "all")}}{{.Board.Key}}{{else}}AGENDA{{end}}</span><span>/</span><span>Канбан</span></div><h1 class="page-title">{{.Board.Name}}</h1><p class="board__subtitle">{{.Board.Subtitle}}</p></div>
-      <span class="board__total" aria-live="polite">{{taskCount .Board.Count}}</span>
+      <div><div class="breadcrumbs"><span class="mono">{{if and .Board.Key (ne .Board.Key "all")}}{{.Board.Key}}{{else}}AGENDA{{end}}</span><span>/</span><span>{{.Board.Subtitle}}</span></div><h1 class="page-title">{{.Board.Name}}</h1></div>
     </header>
+    {{if .Board.HasBoard}}<section class="board-stats" aria-label="Статистика по текущим фильтрам">
+      <div class="board-stat"><h2 class="board-stat__label"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#circle-check"></use></svg>{{if .Board.InSprint}}Закрыто в спринте{{else}}Закрыто{{end}}</h2><div class="board-stat__value">{{.Board.Stats.Done}}<span class="board-stat__unit">из {{.Board.Stats.Total}}</span></div><p class="board-stat__caption">{{.Board.Stats.Completion}}% выполнено{{if .Board.Stats.Cancelled}} · Без отменённых{{end}}</p><progress class="board-stat__progress" value="{{.Board.Stats.Done}}" max="{{if .Board.Stats.Total}}{{.Board.Stats.Total}}{{else}}1{{end}}" aria-label="Выполнено задач">{{.Board.Stats.Completion}}%</progress></div>
+      <div class="board-stat"><h2 class="board-stat__label"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#circle-open"></use></svg>Открыто</h2><div class="board-stat__value">{{.Board.Stats.Open}}<span class="board-stat__unit">{{taskWord .Board.Stats.Open}}</span></div><p class="board-stat__caption">К работе, в работе и на проверке</p></div>
+      <div class="board-stat"><h2 class="board-stat__label"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#code-changes"></use></svg>Изменения кода</h2>{{if .Board.Stats.CodeChanges.WithStats}}<div class="board-stat__value">{{.Board.Stats.ChangedLines}}<span class="board-stat__unit">строк</span></div>{{template "diff-stat" .Board.Stats.CodeChanges}}{{if lt .Board.Stats.CodeChanges.WithStats .Board.Stats.CodeChanges.Links}}<p class="board-stat__caption">Неполная статистика ссылок</p>{{end}}{{else}}<div class="board-stat__value board-stat__value--empty">Нет данных</div><p class="board-stat__caption">{{if .Board.Stats.CodeChanges.Links}}Для ссылок не указана статистика{{else}}Нет привязанных PR и коммитов{{end}}</p>{{end}}</div>
+    </section>{{end}}
     {{if not .Board.HasBoard}}
     <section class="empty-state"><span class="empty-state__mark"><svg class="icon empty-state__icon" aria-hidden="true"><use href="/static/icons.svg#columns"></use></svg></span><h2 class="empty-state__title">Здесь начнётся работа</h2><p class="empty-state__description">Пока нет ни одной доски. Когда появятся задачи, они будут собраны здесь.</p></section>
     {{else if not .Board.Columns}}
@@ -27,15 +32,23 @@
       </section>{{end}}
     </div>
     {{end}}
-    <footer class="page-footer"><span>{{if and .Board.Key (ne .Board.Key "all")}}{{.Board.Key}} / {{end}}{{.Board.Name}}</span><span class="mono">/</span></footer>
+    <footer class="page-footer"><span>{{if and .Board.Key (ne .Board.Key "all")}}{{.Board.Key}} / {{end}}{{.Board.Subtitle}}</span><span class="board__total" aria-live="polite">{{taskCount .Board.Count}}</span></footer>
   </main>
 </div>
 {{end}}
 
 {{define "card"}}
-<a class="task-card" href="/{{.ID}}" aria-label="{{.ID}}: {{.Title}}">
-  <div class="task-card__header"><span class="task-card__id mono">{{.ID}}</span><span class="priority priority--{{.Priority}} tooltip" data-priority="{{.Priority}}" data-tooltip="{{priority .Priority}}" aria-label="Приоритет: {{priority .Priority}}"><svg class="icon priority__icon" aria-hidden="true"><use href="/static/icons.svg#{{if or (eq .Priority "high") (eq .Priority "critical")}}arrow-up{{else if eq .Priority "low"}}arrow-down{{else}}minus{{end}}"></use></svg></span></div>
+<article class="task-card">
+  <a class="task-card__link" href="/{{.ID}}" aria-label="{{.ID}}: {{.Title}}">
+  <div class="task-card__header"><span class="task-card__id mono">{{.ID}}</span>{{if or (eq .Priority "high") (eq .Priority "critical")}}<span class="priority priority--{{.Priority}} tooltip" data-priority="{{.Priority}}" data-tooltip="{{priority .Priority}}" aria-label="Приоритет: {{priority .Priority}}"><svg class="icon priority__icon" aria-hidden="true"><use href="/static/icons.svg#arrow-up"></use></svg></span>{{end}}</div>
   <h3 class="task-card__title">{{.Title}}</h3>
-  <div class="task-card__meta"><span class="task-type task-type--{{.Type}}" data-type="{{.Type}}"><svg class="icon task-type__icon" aria-hidden="true"><use href="/static/icons.svg#{{if eq .Type "bug"}}bug{{else if eq .Type "chore"}}wrench{{else}}diamond{{end}}"></use></svg>{{taskType .Type}}</span><span class="avatar tooltip" data-tooltip="{{.Assignee.Name}}" aria-label="{{.Assignee.Name}}">{{.Assignee.Initials}}</span></div>
-</a>
+  <div class="task-card__meta"><span class="task-type task-type--{{.Type}}" data-type="{{.Type}}"><svg class="icon task-type__icon" aria-hidden="true"><use href="/static/icons.svg#{{if eq .Type "bug"}}bug{{else if eq .Type "chore"}}wrench{{else}}diamond{{end}}"></use></svg>{{taskType .Type}}</span>{{if .AssigneeID}}<span class="avatar tooltip" data-tooltip="{{.Assignee.Name}}" aria-label="{{.Assignee.Name}}">{{.Assignee.Initials}}</span>{{end}}</div>
+  {{if .Deadline}}<span class="task-card__deadline"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#calendar"></use></svg>До <time datetime="{{isoDate .Deadline}}" data-date>{{date .Deadline}}</time></span>{{end}}
+  </a>
+  {{if .CodeLinks}}<div class="task-card__details">{{range $index, $link := .CodeLinks}}{{if lt $index 2}}<div class="task-card__code"><a class="task-card__code-link" href="{{.URL}}" target="_blank" rel="noopener noreferrer" aria-label="{{if eq .Type "commit"}}Коммит{{else}}Pull request{{end}}: {{.URL}}"><svg class="icon" aria-hidden="true"><use href="/static/icons.svg#{{if eq .Type "commit"}}git-commit{{else}}git-pull-request{{end}}"></use></svg>{{codeLinkLabel .}}</a>{{if .Additions}}<span class="diff-stat"><span class="diff-stat__additions">+{{.Additions}}</span><span class="diff-stat__deletions">−{{.Deletions}}</span></span>{{else}}<span class="diff-stat__coverage">Без статистики</span>{{end}}</div>{{end}}{{end}}{{if gt .CodeChanges.Links 2}}<a class="task-card__all-links" href="/{{.ID}}#code-links">Все изменения · {{.CodeChanges.Links}}</a>{{end}}</div>{{end}}
+</article>
 {{end}}
+
+{{define "diff-stat"}}{{if .Links}}
+<span class="diff-stat" title="Статистика для {{.WithStats}} из {{.Links}} ссылок">{{if .WithStats}}<span class="diff-stat__additions">+{{.Additions}}</span><span class="diff-stat__deletions">−{{.Deletions}}</span>{{if lt .WithStats .Links}}<span class="diff-stat__coverage">{{.WithStats}}/{{.Links}}</span>{{end}}{{else}}<span class="diff-stat__coverage">Без статистики</span>{{end}}</span>
+{{end}}{{end}}

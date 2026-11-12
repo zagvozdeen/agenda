@@ -62,6 +62,13 @@ type Storage interface {
 
 	GetTaskLink(ctx context.Context, from, to string, kind enums.LinkType) (*models.TaskLink, error)
 	ListTaskLinks(ctx context.Context, id string) ([]models.TaskLink, error)
+	GetCodeLink(ctx context.Context, id uuid.UUID) (*models.CodeLink, error)
+	ListCodeLinks(ctx context.Context, taskID string) ([]models.CodeLink, error)
+	ListCodeLinksForTasks(ctx context.Context, taskIDs []string) (map[string][]models.CodeLink, error)
+	CodeLinkSummaries(ctx context.Context, taskIDs []string) (map[string]models.CodeSummary, error)
+	CreateCodeLink(ctx context.Context, link *models.CodeLink) error
+	UpdateCodeLink(ctx context.Context, link *models.CodeLink) error
+	DeleteCodeLink(ctx context.Context, id uuid.UUID) error
 	CreateTaskLink(ctx context.Context, link *models.TaskLink) error
 	DeleteTaskLink(ctx context.Context, from, to string, kind enums.LinkType) error
 

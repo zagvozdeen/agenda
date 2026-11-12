@@ -1,6 +1,7 @@
 package api
 
 import (
+	"time"
 	"uuid"
 
 	"gitverse.ru/zagvozdeen/agenda/internal/models/enums"
@@ -92,6 +93,7 @@ type CreateTaskInput struct {
 	SprintNumber   *int               `json:"sprint_number,omitempty" jsonschema:"Sprint on this board; omit for backlog."`
 	ParentID       *string            `json:"parent_id,omitempty" jsonschema:"Parent task on the same board."`
 	EstimateHours  *int               `json:"estimate_hours,omitempty" jsonschema:"Estimated effort in whole hours, at least zero."`
+	Deadline       *time.Time         `json:"deadline,omitempty" jsonschema:"Optional deadline as an RFC3339 timestamp with timezone."`
 	IdempotencyKey *uuid.UUID         `json:"idempotency_key,omitempty" jsonschema:"Reuse the same UUID when retrying task creation."`
 }
 
@@ -110,6 +112,7 @@ type UpdateTaskInput struct {
 	SprintNumber  Optional[int]       `json:"sprint_number,omitzero" jsonschema:"New sprint number on the same board; null moves the task to backlog."`
 	ParentID      Optional[string]    `json:"parent_id,omitzero" jsonschema:"New parent task on the same board; null clears the parent."`
 	EstimateHours Optional[int]       `json:"estimate_hours,omitzero" jsonschema:"New estimated effort in whole hours; null clears the estimate."`
+	Deadline      Optional[time.Time] `json:"deadline,omitzero" jsonschema:"New deadline as an RFC3339 timestamp with timezone; null clears it."`
 }
 
 type SearchTasksInput struct {

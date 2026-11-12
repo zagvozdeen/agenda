@@ -21,6 +21,7 @@ type Task struct {
 	SprintNumber   *int               `json:"sprint_number,omitempty"`
 	ParentID       *string            `json:"parent_id,omitempty"`
 	EstimateHours  *int               `json:"estimate_hours,omitempty"`
+	Deadline       *time.Time         `json:"deadline,omitempty"`
 	IdempotencyKey *uuid.UUID         `json:"idempotency_key,omitempty"`
 	CreatedAt      time.Time          `json:"created_at"`
 	UpdatedAt      time.Time          `json:"updated_at"`
